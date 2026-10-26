@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: game
+      POSTGRES_DB: game
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U game']
+      interval: 2s
+      retries: 15
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgres
+      DATABASE_URL: postgres://game:game@db:5432/game
+      DB_SYNC: 'true'
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin-password}
+      SEED_SERVER_PASSWORD: ${SEED_SERVER_PASSWORD:-server-password}
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      interval: 3s
+      retries: 20
+
+volumes:
+  db-data:
